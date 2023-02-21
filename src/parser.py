@@ -1,7 +1,12 @@
+from datetime import datetime, timedelta, date, timezone, time
+from typing import List
+
 import requests
 from bs4 import BeautifulSoup
 from fastapi import HTTPException
 from starlette import status as response_status
+
+from app.database import MetroNews
 
 
 def get_soup_webpage() -> BeautifulSoup:
@@ -23,3 +28,20 @@ def get_soup_webpage() -> BeautifulSoup:
         raise HTTPException(status_code=response.status_code, detail=f'Some problems with requesting site')
 
     return BeautifulSoup(response.text, 'lxml')
+
+
+async def get_news_for_last_n_days(n_days: int = 1) -> List[MetroNews]:
+    if n_days < 0:
+        return []
+
+    # Таблица возвращает в нулевой таймзоне, наткнулся на баг, что первые 3 часа нового дня записи не отображались
+    moscow_timezone_delta = 3
+    yesterday = datetime.combine(date.today(), time()) - timedelta(days=n_days, hours=moscow_timezone_delta)
+    last_parsed_news = await MetroNews.filter(date_added_on_site__gte=yesterday).order_by('-date_added_on_site')
+
+    # Добавляем 3 часа записям
+    timezone_to_add = timezone(timedelta(hours=moscow_timezone_delta),  name="MSK")
+    for news in last_parsed_news:
+        news.date_added_on_site = news.date_added_on_site.astimezone(timezone_to_add)
+
+    return last_parsed_news
