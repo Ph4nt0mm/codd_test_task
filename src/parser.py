@@ -1,3 +1,5 @@
+import logging
+from asyncio import SelectorEventLoop
 from datetime import datetime, timedelta, date, timezone, time
 from typing import List
 
@@ -28,6 +30,67 @@ def get_soup_webpage() -> BeautifulSoup:
         raise HTTPException(status_code=response.status_code, detail=f'Some problems with requesting site')
 
     return BeautifulSoup(response.text, 'lxml')
+
+
+def parse_news_page(loop: SelectorEventLoop):
+    logging.info('Beginning parsing site')
+
+    webpage = get_soup_webpage()
+
+    # Извлечение таблиц, в которых записаны новости
+    content_part_of_page = webpage.find('body').find_all('table', recursive=False)[1]
+    part_of_tables = content_part_of_page.find('tr').find_all('td', recursive=False)[2].find('tr').find('center')
+    news_tables = part_of_tables.find_all('table', recursive=False)
+
+    # Получаем последние спаршенные новости, что бы не вставлять дубликаты в страницу
+    last_added_news = loop.run_until_complete(get_news_for_last_n_days())
+    last_added_news = last_added_news[0] if last_added_news else None
+
+    new_news: List[MetroNews] = []
+    for news_table in news_tables:
+        for news_row in news_table.find_all('tr', recursive=False):
+            # Получаем информацию об изображении
+            news_columns = news_row.find_all('td', recursive=False)
+            news_image_column = news_columns[0]
+            image_link = news_image_column.find("img")
+
+            if image_link is not None:
+                image_link = f'https://mosday.ru/news/{image_link["src"]}'
+
+            # Получаем информацию об изображении
+            title_content = news_columns[1].contents[0]
+            title_content_elements = title_content.contents
+
+            # В таблице может пресутствовать строка "смотреть еще больше", отсекаем ее
+            if len(title_content_elements) < 5:
+                continue
+
+            # Получаем информацию из заголовка
+            publication_date = title_content_elements[0].text
+            publication_time = title_content_elements[1].text.strip()
+            publication_datetime = datetime.strptime(
+                f'{publication_date} {publication_time} +0300', '%d.%m.%Y %H:%M %z'
+            )
+            publication_title = title_content.find('a')
+            publication_title_text = publication_title.text
+            publication_link = f'https://mosday.ru/news/{publication_title["href"]}'
+            publication_number = publication_link[publication_link.find('?')+1:publication_link.find('&')]
+
+            # Добавляем только свежие записи
+            if last_added_news is not None:
+                if last_added_news.date_added_on_site >= publication_datetime:
+                    break
+
+            new_news.append(MetroNews(
+                id=publication_number,
+                date_added_on_site=publication_datetime,
+                title=publication_title_text,
+                image_url=image_link
+            ))
+
+    # Сохраняем записи
+    loop.run_until_complete(MetroNews.bulk_create(objects=new_news))
+    logging.info(f'Have finished parsing site: have added {new_news} tasks')
 
 
 async def get_news_for_last_n_days(n_days: int = 1) -> List[MetroNews]:
