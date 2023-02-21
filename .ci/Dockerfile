@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:experimental
+
+ARG UBUNTU_VER=18.04
+ARG OS_TYPE=x86_64
+ARG PY_VER=3.9
+
+FROM python:$PY_VER
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD sh -c "aerich upgrade && uvicorn run:app --host 127.0.0.1 --port 8002"

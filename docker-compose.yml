@@ -1,0 +1,29 @@
+version: '3'
+services:
+  codd_test_task:
+    build:
+      context: .
+      dockerfile: .ci/Dockerfile
+    container_name: codd_test_task
+    image: sha256:9e87a13d1fc77be52581569903d6c105b45cf6eb5ae56ac9d4f70e9109df3751
+    ports:
+      - "8002:8002"
+    environment:
+    - PG_USER=postgres
+    - PG_PASSWORD=pass
+    - PG_DATABASE=codd_test_db
+    - PG_HOST=postgres
+    - PG_PORT=5432
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres
+    ports:
+      - "5443:5432"
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "pass"
+      POSTGRES_DB: "codd_test_db"
+      PG_HOST: "postgres"
+      PG_PORT: "5432"
