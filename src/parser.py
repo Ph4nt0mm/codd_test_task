@@ -90,7 +90,7 @@ def parse_news_page(loop: SelectorEventLoop):
 
     # Сохраняем записи
     loop.run_until_complete(MetroNews.bulk_create(objects=new_news))
-    logging.info(f'Have finished parsing site: have added {new_news} tasks')
+    logging.info(f'Have finished parsing site: have added {len(new_news)} tasks')
 
 
 async def get_news_for_last_n_days(n_days: int = 1) -> List[MetroNews]:
