@@ -6,6 +6,7 @@ services:
       dockerfile: .ci/Dockerfile
     container_name: codd_test_task
     image: sha256:9e87a13d1fc77be52581569903d6c105b45cf6eb5ae56ac9d4f70e9109df3751
+    restart: always
     ports:
       - "8002:8002"
     environment:
@@ -20,7 +21,8 @@ services:
   postgres:
     image: postgres
     ports:
-      - "5443:5432"
+      - "5432:5432"
+    restart: always
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "pass"

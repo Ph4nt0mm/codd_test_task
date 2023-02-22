@@ -24,7 +24,7 @@ if __name__ == '__main__':
     scheduler = BlockingScheduler()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(Tortoise.init(config=TORTOISE_ORM))
-    scheduler.add_job(parse_news_page, 'interval', seconds=100, args=[loop])
+    scheduler.add_job(parse_news_page, 'interval', minutes=10, args=[loop])
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit) as e:
