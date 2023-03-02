@@ -5,7 +5,6 @@ services:
       context: .
       dockerfile: .ci/Dockerfile
     container_name: codd_test_task
-    image: sha256:96dd6a18e64e1ca08675a3df173ecfce283b4d84ef3d433ca5916e185ce91f22
     restart: always
     ports:
       - "8002:8002"
